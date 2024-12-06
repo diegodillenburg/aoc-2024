@@ -2,93 +2,123 @@ use std::collections::HashMap;
 use std::fs;
 
 fn main() {
-    let contents = read_file("input.txt");
-
-    let (page_rules, manual_updates) = parse_contents(&contents);
-
-    let page_rules_map = build_page_rules_map(&page_rules);
-    let (median_sum, rectified_median_sum) = process_manual_updats(&manual_updates, &page_rules_map);
-
-    println!(
-        "The sum of the middle page numbers is:\n\t- Correct updates: {}\n\t- Rectified updates: {}",
-        median_sum, rectified_median_sum
-    );
+    let processor = PageProcessor::new("input.txt");
+    processor.process_updates();
 }
 
-fn read_file(filename: &str) -> String {
-    fs::read_to_string(filename).expect("Something went wrong reading the file")
+struct PageRule {
+    page: usize,
+    preceeds: Vec<usize>,
 }
 
-fn parse_contents(contents: &str) -> (Vec<&str>, Vec<&str>) {
-    let parts: Vec<&str> = contents.split("\n\n").collect();
-    let page_rules = parts.get(0).unwrap().lines().collect();
-    let manual_updates = parts.get(1).unwrap().lines().collect();
-    (page_rules, manual_updates)
-}
-
-fn build_page_rules_map(page_rules: &[&str]) -> HashMap<usize, Vec<usize>> {
-    let mut page_rules_map = HashMap::new();
-    for rule in page_rules {
-        let parts: Vec<&str> = rule.split('|').collect();
-        if let (Ok(page), Ok(preceeds)) = (parts[0].parse(), parts[1].parse()) {
-            page_rules_map.entry(page).or_insert_with(Vec::new).push(preceeds);
-        }
+impl PageRule {
+    fn new(page: usize, preceeds: Vec<usize>) -> Self {
+        Self { page, preceeds }
     }
-    page_rules_map
 }
 
-fn process_manual_updats(manual_updates: &[&str], page_rules_map: &HashMap<usize, Vec<usize>>) -> (usize, usize) {
-    let mut median_sum = 0;
-    let mut rectified_median_sum = 0;
+struct ManualUpdate {
+    pages: Vec<usize>,
+}
 
-    for update in manual_updates {
-        match parse_manual_update(update) {
-            Ok(pages) => {
-                let(median, rectified) = analyze_pages(&pages, page_rules_map);
-                if rectified {
-                    rectified_median_sum += median;
-                } else {
-                    median_sum += median;
+impl ManualUpdate {
+    fn new(pages: Vec<usize>) -> Self {
+        Self { pages }
+    }
+
+    fn analyze(&self, page_rules_map: &HashMap<usize, Vec<usize>>) -> (usize, bool) {
+        let mut pages_read = Vec::new();
+        let mut rectified = false;
+
+        for &page in &self.pages {
+            if ManualUpdate::wrong_order(page, &mut pages_read, page_rules_map) {
+                rectified = true;
+            } else {
+                pages_read.push(page);
+            }
+        }
+
+        let median_index = pages_read.len() / 2;
+        let median = *pages_read.get(median_index).unwrap();
+        (median, rectified)
+    }
+
+    fn wrong_order(page: usize, pages_read: &mut Vec<usize>, page_rules_map: &HashMap<usize, Vec<usize>>) -> bool {
+        if let Some(preceeds) = page_rules_map.get(&page) {
+            for (index, &page_read) in pages_read.iter().enumerate() {
+                if preceeds.contains(&page_read) {
+                    pages_read.insert(index, page);
+                    return true;
                 }
             }
-            Err(e) => {
-                eprintln!("failed to parse numbers: {}", e);
+        }
+        false
+    }
+
+}
+
+struct PageProcessor {
+    page_rules_map: HashMap<usize, Vec<usize>>,
+    manual_updates: Vec<ManualUpdate>,
+}
+
+impl PageProcessor {
+    fn new(filename: &str) -> Self {
+        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+        let (page_rules, manual_updates) = PageProcessor::parse_contents(&contents);
+
+        let page_rules_map = PageProcessor::build_page_rules_map(&page_rules);
+        let manual_updates = manual_updates
+            .into_iter()
+            .map(ManualUpdate::new)
+            .collect();
+
+        PageProcessor { page_rules_map, manual_updates }
+    }
+
+    fn parse_contents(contents: &str) -> (Vec<PageRule>, Vec<Vec<usize>>) {
+        let parts: Vec<&str> = contents.split("\n\n").collect();
+        let page_rules = parts.get(0).unwrap().lines().map(|line| {
+            let parts: Vec<&str> = line.split('|').collect();
+            let page = parts[0].parse().unwrap();
+            let preceeds = vec![parts[1].parse().unwrap()];
+            PageRule::new(page, preceeds)
+        }).collect();
+
+        let manual_updates = parts.get(1).unwrap().lines().map(|line| {
+            line.split(',')
+                .map(|c| c.trim().parse().unwrap())
+                .collect::<Vec<usize>>()
+        }).collect();
+
+        (page_rules, manual_updates)
+    }
+
+    fn build_page_rules_map(page_rules: &[PageRule]) -> HashMap<usize, Vec<usize>> {
+        let mut map = HashMap::new();
+        for rule in page_rules {
+            map.entry(rule.page).or_insert_with(Vec::new).extend(&rule.preceeds);
+        }
+        map
+    }
+
+    fn process_updates(&self) {
+        let mut median_sum = 0;
+        let mut rectified_median_sum = 0;
+
+        for update in &self.manual_updates {
+            let (median, rectified) = update.analyze(&self.page_rules_map);
+            if rectified {
+                rectified_median_sum += median;
+            } else {
+                median_sum += median;
             }
         }
+
+        println!(
+            "The sum of the middle page numbers is:\n\t- Correct updates: {}\n\t- Rectified updates: {}",
+            median_sum, rectified_median_sum
+        );
     }
 
-    (median_sum, rectified_median_sum)
-}
-
-fn parse_manual_update(update: &str) -> Result<Vec<usize>, std::num::ParseIntError> {
-    update.split(',').map(|c| c.trim().parse::<usize>()).collect()
-}
-
-fn analyze_pages(pages: &[usize], page_rules_map: &HashMap<usize, Vec<usize>>) -> (usize, bool) {
-    let mut pages_read = Vec::new();
-    let mut rectified = false;
-
-    for &page in pages {
-        if wrong_order(page, &mut pages_read, page_rules_map) {
-            rectified = true;
-        } else {
-            pages_read.push(page);
-        }
-    }
-
-    let median_index = pages_read.len() / 2;
-    let median = *pages_read.get(median_index).unwrap();
-    (median, rectified)
-}
-
-fn wrong_order(page: usize, pages_read: &mut Vec<usize>, page_rules_map: &HashMap<usize, Vec<usize>>) -> bool {
-    if let Some(preceeds) = page_rules_map.get(&page) {
-        for (index, &page_read) in pages_read.iter().enumerate() {
-            if preceeds.contains(&page_read) {
-                pages_read.insert(index, page);
-                return true;
-            }
-        }
-    }
-    false
 }
