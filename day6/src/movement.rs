@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Eq, Clone, Debug, Hash, PartialEq)]
 pub enum Direction {
     North,
     East,
@@ -17,8 +17,14 @@ impl Direction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Waypoint {
+    pub position: Position,
+    pub direction: Direction,
 }

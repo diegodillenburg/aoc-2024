@@ -1,17 +1,24 @@
+use std::collections::HashSet;
 use crate::map::{Map, Tile};
-use crate::movement::{Direction, Position};
+use crate::movement::{Direction, Position, Waypoint};
 
 #[derive(Debug)]
 pub struct Guard {
     pub position: Position,
+    pub initial_position: Position,
     pub direction: Direction,
     pub distinct_tiles: usize,
+    pub path_record: Vec<Waypoint>,
+    pub looping: bool,
 }
 
 impl Guard {
-    pub fn patrol(&mut self, map: &mut Map) -> usize {
-        while let Some(_next_movement) = Guard::walk(self, map) { }
-        self.distinct_tiles
+    pub fn patrol(&mut self, map: &mut Map) {
+        while let Some(_next_movement) = Guard::walk(self, map) {
+            if self.is_looping() {
+                break;
+            }
+        }
     }
 
     pub fn next_move(&self, map_height: usize, map_width: usize) -> Option<Position> {
@@ -66,10 +73,29 @@ impl Guard {
     pub fn perform_move(&mut self, map_height: usize, map_width: usize) {
         match self.next_move(map_height, map_width) {
             Some(next_position) => {
+                self.path_record.push(Waypoint {
+                    position: self.position.clone(),
+                    direction: self.direction.clone(),
+                });
+
                 self.position = next_position;
             },
             None => ()
         }
+    }
+
+    pub fn is_looping(&mut self) -> bool {
+        let mut seen = HashSet::new();
+        for waypoint in self.path_record.iter() {
+            if seen.contains(&waypoint) {
+                self.looping = true;
+                return true;
+            }
+
+            seen.insert(waypoint);
+        }
+
+        false
     }
 
     pub fn walk(guard: &mut Guard, map: &mut Map) -> Option<Tile> {

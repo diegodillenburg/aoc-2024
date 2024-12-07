@@ -1,7 +1,7 @@
 use std::fs;
 use crate::movement::Position;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Map {
     pub tiles: Vec<Vec<Tile>>,
 }
@@ -14,7 +14,7 @@ impl Map {
     }
 
     fn build_tiles() -> Vec<Vec<Tile>> {
-        let map = fs::read_to_string("input_mini.txt")
+        let map = fs::read_to_string("input.txt")
             .expect("there was an issue reading the file");
 
         let map: Vec<&str> = map.split("\n").collect();
