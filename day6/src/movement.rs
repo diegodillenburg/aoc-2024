@@ -17,7 +17,7 @@ impl Direction {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Position {
     pub x: usize,
     pub y: usize,

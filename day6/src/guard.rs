@@ -7,18 +7,32 @@ pub struct Guard {
     pub position: Position,
     pub initial_position: Position,
     pub direction: Direction,
-    pub distinct_tiles: usize,
+    pub distinct_tiles: Vec<Position>,
     pub path_record: Vec<Waypoint>,
     pub looping: bool,
 }
 
 impl Guard {
-    pub fn patrol(&mut self, map: &mut Map) {
-        while let Some(_next_movement) = Guard::walk(self, map) {
-            if self.is_looping() {
-                break;
-            }
+    pub fn new(initial_position: Position) -> Guard {
+        Guard {
+            position: initial_position.clone(),
+            initial_position,
+            direction: Direction::North,
+            distinct_tiles: Vec::new(),
+            path_record: Vec::new(),
+            looping: false,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.position = self.initial_position.clone();
+        self.direction = Direction::North;
+        self.path_record.clear();
+        self.looping = false;
+    }
+
+    pub fn patrol(&mut self, map: &mut Map) {
+        while let Some(_next_movement) = Guard::walk(self, map) { }
     }
 
     pub fn next_move(&self, map_height: usize, map_width: usize) -> Option<Position> {
@@ -107,12 +121,19 @@ impl Guard {
                     if tile.walkable() {
                         guard.perform_move(map_height, map_width);
                         if !tile.visited {
-                            guard.distinct_tiles += 1;
+                            guard.distinct_tiles.push(Position {
+                                x: guard.position.x,
+                                y: guard.position.y,
+                            });
                         }
 
                         tile.visited = true;
                     } else {
                         guard.turn_right();
+
+                        if guard.is_looping() {
+                            return None;
+                        }
                     }
 
                     return Some(tile.clone());
