@@ -5,27 +5,33 @@ pub struct CalibrationEntry {
 }
 
 impl CalibrationEntry {
-    fn operators(max_size: usize) -> Vec<Vec<char>> {
+    fn operators(max_size: usize, base: usize) -> Vec<Vec<char>> {
         let mut operators: Vec<Vec<char>> = Vec::new();
 
-        for i in 0..(1 << max_size) {
+        for i in 0..(base.pow(max_size as u32)) {
             let mut operator_list: Vec<char> = vec![];
-            for j in (0..max_size).rev() {
-                if (i & (1 << j)) == 0 {
-                    operator_list.push('+');
-                } else {
-                    operator_list.push('*');
+            let mut num = i;
+
+            for _ in 0..max_size {
+                let remainder = num % base;
+                match remainder {
+                    0 => operator_list.push('+'),
+                    1 => operator_list.push('*'),
+                    _ => operator_list.push('|'),
                 }
+
+                num /= base;
             }
 
+            operator_list.reverse();
             operators.push(operator_list);
         }
 
         operators
     }
 
-    pub fn process(&self) -> bool {
-        let operators = CalibrationEntry::operators(self.operands.len() - 1);
+    pub fn process(&self, base: usize) -> bool {
+        let operators = CalibrationEntry::operators(self.operands.len() - 1, base);
 
         for operator_list in operators {
             let mut operands = self.operands.clone();
@@ -50,8 +56,11 @@ impl CalibrationEntry {
     fn evaluate(operand_1: usize, operand_2: usize, operator: char) -> usize {
         if operator == '+' {
             operand_1 + operand_2
-        } else {
+        } else if operator == '*'{
             operand_1 * operand_2
+        } else { // '|' operator
+            let operand_2_len = operand_2.to_string().len();
+            operand_1 * 10usize.pow(operand_2_len as u32) + operand_2
         }
     }
 }

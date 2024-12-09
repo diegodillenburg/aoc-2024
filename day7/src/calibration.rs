@@ -45,9 +45,10 @@ impl Calibration {
         }
     }
 
-    pub fn process(&mut self) {
+    pub fn process(&mut self, base: usize) {
+        self.result = 0;
         for calibration_entry in self.calibration_entries.iter() {
-            if calibration_entry.process() {
+            if calibration_entry.process(base) {
                 self.result += calibration_entry.expected_output;
             }
         }
