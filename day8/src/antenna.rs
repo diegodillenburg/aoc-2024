@@ -10,45 +10,38 @@ pub struct AntennaPair {
 impl AntennaPair {
     pub fn new(antenna_a: Antenna, antenna_b: Antenna, max_width: usize, max_height: usize) -> AntennaPair {
         let mut antinodes: Vec<Antinode> = Vec::new();
-        let distance = Coordinate::calculate_distance(&antenna_a.coordinate, &antenna_b.coordinate);
-        let antinode_x = antenna_a.coordinate.x as isize + distance.0;
-        let antinode_y = antenna_a.coordinate.y as isize + distance.1;
-        if antinode_x > 0 && antinode_y > 0 {
-            let antinode_x = antinode_x as usize;
-            let antinode_y = antinode_y as usize;
-            if antinode_x <= max_width && antinode_y <= max_height {
-                let antinode = Antinode {
-                    coordinate: Coordinate {
-                        x: antinode_x,
-                        y: antinode_y,
-                    },
-                    distance,
-                };
-                antinodes.push(antinode);
-            }
-        }
-        let distance = Coordinate::calculate_distance(&antenna_b.coordinate, &antenna_a.coordinate);
-        let antinode_x = antenna_b.coordinate.x as isize + distance.0;
-        let antinode_y = antenna_b.coordinate.y as isize + distance.1;
-        if antinode_x > 0 && antinode_y > 0 {
-            let antinode_x = antinode_x as usize;
-            let antinode_y = antinode_y as usize;
-            if antinode_x <= max_width && antinode_y <= max_height {
-                let antinode = Antinode {
-                    coordinate: Coordinate {
-                        x: antinode_x,
-                        y: antinode_y,
-                    },
-                    distance,
-                };
-                antinodes.push(antinode);
-            }
-        }
+
+        Self::generate_antinodes(&mut antinodes, &antenna_a, &antenna_b, max_width, max_height);
+
+        Self::generate_antinodes(&mut antinodes, &antenna_b, &antenna_a, max_width, max_height);
 
         AntennaPair {
             antenna_a,
             antenna_b,
             antinodes,
+        }
+    }
+
+    fn generate_antinodes(
+        antinodes: &mut Vec<Antinode>,
+        start_antenna: &Antenna,
+        other_antenna: &Antenna,
+        max_width: usize,
+        max_height: usize,
+    ) {
+        let distance = Coordinate::calculate_distance(&start_antenna.coordinate, &other_antenna.coordinate);
+        let mut current_x = start_antenna.coordinate.x as isize;
+        let mut current_y = start_antenna.coordinate.y as isize;
+
+        while current_x > 0 && current_y > 0 && (current_x as usize) <= max_width && (current_y as usize) <= max_height {
+            let antinode_x = current_x as usize;
+            let antinode_y = current_y as usize;
+            antinodes.push(Antinode {
+                coordinate: Coordinate { x: antinode_x, y: antinode_y },
+                distance,
+            });
+            current_x += distance.0;
+            current_y += distance.1;
         }
     }
 }
