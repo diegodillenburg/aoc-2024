@@ -9,9 +9,38 @@ pub struct Trailhead {
 
 impl Trailhead {
     pub fn new(coordinate: Coordinate, topography: &Vec<Vec<Tile>>) -> Trailhead {
+        let mut peaks = HashSet::new();
+        Trailhead::traverse(coordinate, topography, 1, &mut peaks);
         Trailhead {
             coordinate,
-            peaks: HashSet::new(),
+            peaks,
+        }
+    }
+
+    pub fn score(&self) -> usize {
+        self.peaks.len()
+    }
+
+    pub fn traverse(coordinate: Coordinate, topography: &Vec<Vec<Tile>>, step: usize, peaks: &mut HashSet<Coordinate>) {
+        // N E S W
+        let movements = vec![(0, -1), (1, 0), (0, 1), (-1, 0)];
+        let height = topography.len() as isize;
+        let width = topography[0].len() as isize;
+
+        for (dy, dx) in movements {
+            let dx = coordinate.x as isize + dx;
+            let dy = coordinate.y as isize + dy;
+            if dx >= 0 && dx < width && dy >= 0 && dy < height {
+                let tile = &topography[dy as usize][dx as usize];
+                if tile.height == step {
+                    if step == 9 {
+                        peaks.insert(tile.coordinate);
+                        continue;
+                    }
+
+                    Trailhead::traverse(tile.coordinate, topography, step + 1, peaks);
+                }
+            }
         }
     }
 }

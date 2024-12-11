@@ -20,6 +20,10 @@ impl TrailMap {
         }
     }
 
+    pub fn score(&self) -> usize {
+        self.trailheads.iter().map(|trailhead| trailhead.score()).sum::<usize>()
+    }
+
     fn read_topographic_map(path: &str) -> Vec<Vec<Tile>> {
         let tiles = fs::read_to_string(path).expect("error reading the file");
 
@@ -48,7 +52,7 @@ pub struct Tile {
     pub height: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Coordinate {
     pub x: usize,
     pub y: usize,
