@@ -4,12 +4,12 @@ use std::collections::hash_set::HashSet;
 #[derive(Debug)]
 pub struct Trailhead {
     pub coordinate: Coordinate,
-    pub peaks: HashSet<Coordinate>,
+    pub peaks: Vec<Coordinate>,
 }
 
 impl Trailhead {
     pub fn new(coordinate: Coordinate, topography: &Vec<Vec<Tile>>) -> Trailhead {
-        let mut peaks = HashSet::new();
+        let mut peaks = Vec::new();
         Trailhead::traverse(coordinate, topography, 1, &mut peaks);
         Trailhead {
             coordinate,
@@ -21,7 +21,7 @@ impl Trailhead {
         self.peaks.len()
     }
 
-    pub fn traverse(coordinate: Coordinate, topography: &Vec<Vec<Tile>>, step: usize, peaks: &mut HashSet<Coordinate>) {
+    pub fn traverse(coordinate: Coordinate, topography: &Vec<Vec<Tile>>, step: usize, peaks: &mut Vec<Coordinate>) {
         // N E S W
         let movements = vec![(0, -1), (1, 0), (0, 1), (-1, 0)];
         let height = topography.len() as isize;
@@ -34,7 +34,7 @@ impl Trailhead {
                 let tile = &topography[dy as usize][dx as usize];
                 if tile.height == step {
                     if step == 9 {
-                        peaks.insert(tile.coordinate);
+                        peaks.push(tile.coordinate);
                         continue;
                     }
 
