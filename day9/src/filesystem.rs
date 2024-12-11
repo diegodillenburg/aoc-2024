@@ -1,9 +1,13 @@
+use std::collections::HashMap;
 use std::fs;
+use crate::node::Node;
+use crate::metadata::Metadata;
 
 #[derive(Debug)]
 pub struct Filesystem {
     pub feed: Vec<usize>,
     pub nodes: Vec<Node>,
+    pub file_map: HashMap<usize, Metadata>,
 }
 
 impl Filesystem {
@@ -17,10 +21,12 @@ impl Filesystem {
             .collect::<Vec<usize>>();
 
         let nodes = Node::list_from_feed(&feed);
+        let file_map = Filesystem::file_map(&nodes);
 
         Filesystem {
             feed,
             nodes,
+            file_map,
         }
     }
 
@@ -41,6 +47,14 @@ impl Filesystem {
         self.nodes.len()
     }
 
+    pub fn info(&self) {
+        println!(
+            "Filesystem:\n- Size: {}\n- Free space: {}",
+            self.size(),
+            self.free_space()
+        );
+    }
+
     pub fn free_space(&self) -> usize {
         self.nodes
             .iter()
@@ -54,7 +68,67 @@ impl Filesystem {
     }
 
     pub fn reorder_files(&mut self) {
+        let max_id: usize = *self.file_map.keys().max().unwrap();
+        for id in (0..=max_id).rev() {
+            if self.move_file(id) {
+                self.clear_file(id);
+            }
+        }
     }
+
+    fn move_file(&mut self, id: usize) -> bool {
+        let metadata = self.file_map.get(&id).unwrap();
+        let nodes = self.nodes.clone();
+        if let Some(free_space_index) = Filesystem::search_free_space(&nodes, metadata) {
+            let mut size = metadata.size;
+            for i in free_space_index..free_space_index + metadata.size {
+                if let Some(node) = self.nodes.get_mut(i) {
+                    let head = if i == free_space_index { true } else { false };
+                    node.id = Some(id);
+                    node.file = true;
+                    node.size = size;
+                    node.head = head;
+                }
+
+                size -= 1;
+            }
+
+            return true;
+        }
+
+        false
+    }
+
+    fn search_free_space(nodes: &Vec<Node>, metadata: &Metadata) -> Option<usize> {
+        for (index, node) in nodes.iter().enumerate() {
+            if !node.file && node.size >= metadata.size {
+                if index < metadata.index {
+                    return Some(index);
+                }
+            }
+        };
+
+        None
+    }
+
+    fn clear_file(&mut self, id: usize) {
+        let metadata = self.file_map.get(&id).unwrap();
+        let mut index = metadata.index;
+
+        while let Some(node) = self.nodes.get_mut(index) {
+            if index >= (metadata.index + metadata.size) {
+                break;
+            }
+
+            node.id = None;
+            node.head = false;
+            node.file = false;
+
+            index += 1;
+        }
+    }
+
+
 
     pub fn reorder_blocks(&mut self) {
         let mut index_offset = 0;
@@ -79,7 +153,7 @@ impl Filesystem {
                                 old_node.file = false;
                                 old_node.id = None;
                                 last_free_space = index;
-                                // self.print();
+                                self.print();
                             }
                             None => ()
                         }
@@ -123,51 +197,26 @@ impl Filesystem {
 
         println!("{}", nodes);
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct Node {
-    pub id: Option<usize>,
-    pub file: bool,
-}
+    fn file_map(nodes: &Vec<Node>) -> HashMap<usize, Metadata> {
+        let mut hash: HashMap<usize, Metadata> = HashMap::new();
 
-impl Node {
-    fn list_from_feed(feed: &Vec<usize>) -> Vec<Node> {
-        let mut nodes: Vec<Node> = vec![];
-        let mut file: bool = true;
-
-        let mut file_index: usize = 0;
-        feed
+        nodes
             .iter()
             .enumerate()
-            .for_each(|(i, &size)| {
-                if (i + 1) % 2 == 0 {
-                    file = false;
-                } else {
-                    file = true;
-                }
-
-                for _ in 0..size {
-                    let id = if file {
-                        Some(file_index)
-                    } else {
-                        None
-                    };
-
-                    let node = Node {
-                        id,
-                        file,
-                    };
-
-                    nodes.push(node);
-                }
-
-                if file {
-                    file_index += 1;
+            .for_each(|(index, node)| {
+                if node.file && node.head {
+                    if let Some(id) = node.id {
+                        let size = node.size;
+                        let metadata = Metadata {
+                            index,
+                            size,
+                        };
+                        hash.entry(id).or_insert(metadata);
+                    }
                 }
             });
 
-        nodes
+        hash
     }
-
 }
