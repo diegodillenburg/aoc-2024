@@ -4,3 +4,8 @@ pub struct Coordinate {
     pub y: usize,
 }
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct ICoordinate {
+    pub x: isize,
+    pub y: isize,
+}
