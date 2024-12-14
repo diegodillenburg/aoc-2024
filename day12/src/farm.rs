@@ -127,7 +127,19 @@ impl Farm {
 
     pub fn valid_corner(&self, corner: &Corner, char: char) -> bool {
         self.outer_corner(corner, char) ||
-            self.inner_corner(corner, char)
+            self.inner_corner(corner, char) ||
+            self.diagonal_corner(corner, char)
+    }
+
+    pub fn diagonal_corner(&self, corner: &Corner, char: char) -> bool {
+        let coordinates = corner.coordinates.clone();
+        let coordinates: Vec<bool> = vec![
+            !self.match_tile(&coordinates[0], char),
+            self.match_tile(&coordinates[1], char),
+            !self.match_tile(&coordinates[2], char),
+        ];
+
+        coordinates.iter().filter(|&b| *b).count() == 3
     }
 
     fn outer_corner(&self, corner: &Corner, char: char) -> bool {
