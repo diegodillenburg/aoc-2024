@@ -34,6 +34,14 @@ impl Plot {
             self.perimeter
         }
     }
+
+    pub fn safe_edges(&self) -> usize {
+        if self.coordinates.len() == 1 {
+            4
+        } else {
+            self.edges
+        }
+    }
 }
 
 
