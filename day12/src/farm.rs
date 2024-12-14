@@ -1,5 +1,4 @@
 use crate::coordinate::{Coordinate, ICoordinate};
-use crate::node::Node;
 use crate::plot::Plot;
 use crate::tile::Tile;
 use std::collections::{HashMap, HashSet};
@@ -47,7 +46,7 @@ impl Farm {
         let mut price = 0;
         if by_edge {
             for plot in &self.plots {
-                price += plot.edge_count();
+                price += plot.edges * plot.area();
             }
         } else {
             for plot in &self.plots {
@@ -72,7 +71,7 @@ impl Farm {
                 coordinates: HashSet::new(),
                 perimeter: 0,
                 kind: tile.kind,
-                edges: Vec::new(),
+                edges: 0,
             };
 
             self.traverse(&mut plot, tile.kind, tile.coordinate.x, tile.coordinate.y);
@@ -86,12 +85,10 @@ impl Farm {
                     self.plots.push(plot.clone());
                 }
             };
-
-            break;
         }
     }
 
-    fn traverse(&mut self, plot: &mut Plot, char: char, x: usize, y: usize) {
+    fn traverse(&self, plot: &mut Plot, char: char, x: usize, y: usize) {
         let coordinate = Coordinate { x, y };
 
         if plot.coordinates.contains(&coordinate) {
@@ -100,13 +97,6 @@ impl Farm {
 
         if let Some(valid_movements) = self.valid_movements(&coordinate, char) {
             if plot.coordinates.insert(coordinate.clone()) {
-                if plot.coordinates.len() == 1 {
-                    let icoordinate = ICoordinate {
-                        x: coordinate.x as isize,
-                        y: coordinate.y as isize,
-                    };
-                    plot.edges.push(Node::new(&icoordinate));
-                }
                 plot.perimeter += 4 - valid_movements.len();
                 for movement in valid_movements {
                     if movement == coordinate {
@@ -119,10 +109,6 @@ impl Farm {
             if plot.coordinates.insert(coordinate.clone()) {
                 plot.perimeter += 3;
             }
-        }
-
-        if let Some(outer_coordinates) = self.outer_coordinates(&coordinate, char) {
-            self.outer_coordinates_map.entry(coordinate).or_insert(outer_coordinates);
         }
     }
 
